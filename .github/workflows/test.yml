@@ -3,9 +3,6 @@ name: clang-tidy-review
 # You can be more specific, but it currently only works on pull requests
 on: [pull_request]
 
-#concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   review:
