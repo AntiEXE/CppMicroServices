@@ -81,10 +81,13 @@ shellCompletion(char const* buf, linenoiseCompletions* lc)
         linenoiseAddCompletion(lc, iter->c_str());
     }
 }
+void printNumbers(int a, float b);
 
-int
-main(int argc, char** argv)
+
+int main(int argc, char** argv)
 {
+    printNumbers(10.0f, 5);
+    
     argc -= (argc > 0);
     argv += (argc > 0); // skip program name argv[0] if present
     option::Stats stats(usage, argc, argv);
