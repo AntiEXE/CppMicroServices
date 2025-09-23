@@ -60,7 +60,13 @@
 #
 function(usFunctionAddResources)
 
-  cmake_parse_arguments(US_RESOURCE "" "TARGET;BUNDLE_NAME;WORKING_DIRECTORY;COMPRESSION_LEVEL" "FILES;ZIP_ARCHIVES" ${ARGN})
+  cmake_parse_arguments(
+  US_RESOURCE
+  ""
+  "TARGET;BUNDLE_NAME;WORKING_DIRECTORY;COMPRESSION_LEVEL"
+  "FILES;ZIP_ARCHIVES;MANIFESTS"
+  ${ARGN}
+  )
 
   if(NOT US_RESOURCE_TARGET)
     message(SEND_ERROR "TARGET argument not specified.")
@@ -73,7 +79,7 @@ function(usFunctionAddResources)
     endif()
   endif()
 
-  if(NOT US_RESOURCE_FILES AND NOT US_RESOURCE_ZIP_ARCHIVES)
+  if(NOT US_RESOURCE_FILES AND NOT US_RESOURCE_ZIP_ARCHIVES AND NOT US_RESOURCE_MANIFESTS)
     message(WARNING "No resources specified. Skipping resource processing.")
     return()
   endif()
@@ -105,9 +111,22 @@ function(usFunctionAddResources)
   set(_cmd_deps )
   foreach(_file ${US_RESOURCE_FILES})
     if(IS_ABSOLUTE ${_file})
-      list(APPEND _cmd_deps ${_file})
+      message(FATAL_ERROR "FILES entry must be relative (ResourceCompiler -r forbids absolute paths): ${_file}")
+    endif()
+    list(APPEND _cmd_deps ${US_RESOURCE_WORKING_DIRECTORY}/${_file})
+  endforeach()
+
+  # NEW: Collect manifest deps and args for -m
+  set(_manifest_args)
+  foreach(m ${US_RESOURCE_MANIFESTS})
+    if(IS_ABSOLUTE "${m}")
+      # Absolute paths are fine for -m
+      list(APPEND _cmd_deps "${m}")
+      list(APPEND _manifest_args -m "${m}")
     else()
-      list(APPEND _cmd_deps ${US_RESOURCE_WORKING_DIRECTORY}/${_file})
+      # Relative to WORKING_DIRECTORY
+      list(APPEND _cmd_deps "${US_RESOURCE_WORKING_DIRECTORY}/${m}")
+      list(APPEND _manifest_args -m "${m}")
     endif()
   endforeach()
 
@@ -132,17 +151,16 @@ function(usFunctionAddResources)
     endforeach()
   endif()
 
-  if(NOT US_RESOURCE_FILES AND NOT _zip_args)
+  if(NOT US_RESOURCE_FILES AND NOT _zip_args AND NOT US_RESOURCE_MANIFESTS)
     return()
   endif()
 
-  if(US_RESOURCE_FILES)
-    set(_file_args )
-    foreach(_file ${US_RESOURCE_FILES})
-      list(APPEND _file_args -r)
-      list(APPEND _file_args ${_file})
-    endforeach()
-  endif()
+  set(_file_args )
+  foreach(_file ${US_RESOURCE_FILES})
+    list(APPEND _file_args -r)
+    list(APPEND _file_args ${_file})
+  endforeach()
+
   if(_zip_args)
     set(_us_zip_args )
     foreach(_file ${_zip_args})
@@ -167,7 +185,7 @@ function(usFunctionAddResources)
   add_custom_command(
     OUTPUT ${_res_zip}
     COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/${US_RESOURCE_TARGET}"
-    COMMAND ${resource_compiler} ${cmd_line_args} -o ${_res_zip} ${_bundle_args} ${_file_args} ${_us_zip_args}
+    COMMAND ${resource_compiler} ${cmd_line_args} -o ${_res_zip} ${_bundle_args} ${_manifest_args} ${_file_args} ${_us_zip_args}
     WORKING_DIRECTORY ${US_RESOURCE_WORKING_DIRECTORY}
     DEPENDS ${_cmd_deps} ${resource_compiler}
     COMMENT "Checking resource dependencies for ${US_RESOURCE_TARGET}"

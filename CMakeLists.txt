@@ -159,6 +159,7 @@ set(CMAKE_MODULE_PATH
 # CMake function(s) and macro(s)
 #-----------------------------------------------------------------------------
 
+include(usFunctionGenerateDSManifest)
 include(CMakeParseArguments)
 include(CMakePackageConfigHelpers)
 include(CheckCXXSourceCompiles)
